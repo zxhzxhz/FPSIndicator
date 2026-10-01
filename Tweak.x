@@ -1,6 +1,7 @@
 #import <notify.h>
 #import <substrate.h>
 #import <libcolorpicker.h>
+#import <QuartzCore/CAMetalLayer.h>
 #import <objc/runtime.h>
 
 
@@ -15,9 +16,24 @@ static enum FPSMode fpsMode;
 static dispatch_source_t _timer;
 static UILabel *fpsLabel;
 
+// Preference lookup that also works outside of a jailbreak:
+//  - Jailbroken: kPrefPath ("/var/mobile/Library/Preferences/com.brend0n.fpsindicator.plist")
+//  - Injected (LiveContainer / sideload dylib): <App Documents>/FPSIndicator.plist
+// Returns nil when no config file exists at all (fresh injected install).
+static NSMutableDictionary *prefsDictionary(){
+	NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefPath];
+	if(!prefs){
+		NSString *documents = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) firstObject];
+		if(documents.length > 0){
+			prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:[documents stringByAppendingPathComponent:@"FPSIndicator.plist"]];
+		}
+	}
+	return prefs;
+}
+
 static void loadPref(){
 	NSLog(@"loadPref..........");
-	NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefPath];
+	NSMutableDictionary *prefs = prefsDictionary();
 
 	enabled=prefs[@"enabled"]?[prefs[@"enabled"] boolValue]:YES;
 	fpsMode=prefs[@"fpsMode"]?[prefs[@"fpsMode"] intValue]:0;
@@ -31,11 +47,18 @@ static void loadPref(){
 
 }
 static BOOL isEnabledApp(){
-	NSString* bundleIdentifier=[[NSBundle mainBundle] bundleIdentifier];
-	NSMutableDictionary *prefs = [[NSMutableDictionary alloc] initWithContentsOfFile:kPrefPath];
-	return [prefs[@"apps"] containsObject:bundleIdentifier];
+	NSMutableDictionary *prefs = prefsDictionary();
+	if(!prefs){
+		// No preference file: injected build with default settings -> enabled.
+		return YES;
+	}
+	NSArray *apps = prefs[@"apps"];
+	if([apps isKindOfClass:[NSArray class]]){
+		return [apps containsObject:[[NSBundle mainBundle] bundleIdentifier]];
+	}
+	// Preference file exists but no whitelist was configured -> keep usable.
+	return YES;
 }
-
 
 double FPSavg = 0;
 double FPSPerSecond = 0;
@@ -137,20 +160,17 @@ void frameTick(){
 
 #pragma mark metal
 %group metal
-%hook CAMetalDrawable
-- (void)present{
-	%orig;
-	frameTick();
+// NOTE: upstream hooked `CAMetalDrawable`, but that name is an ObjC *protocol*
+// (declared in <QuartzCore/CAMetalLayer.h>), not a class -- objc_getClass()
+// never found it, so Metal frames were silently never counted.
+// `CAMetalLayer -nextDrawable` is a real method called once per rendered frame.
+%hook CAMetalLayer
+- (id<CAMetalDrawable>)nextDrawable{
+	id<CAMetalDrawable> drawable=%orig;
+	if(drawable) frameTick();
+	return drawable;
 }
-- (void)presentAfterMinimumDuration:(CFTimeInterval)duration{
-	%orig;
-	frameTick();
-}
-- (void)presentAtTime:(CFTimeInterval)presentationTime{
-	%orig;
-	frameTick();
-}
-%end //CAMetalDrawable
+%end
 %end//metal
 
 
