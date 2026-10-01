@@ -1,11 +1,9 @@
-Package: com.brend0n.unityfpsindicator
-Name: FPSIndicator 
-Depends: mobilesubstrate, com.opa334.altlist
-Version: 0.0.4.2
-Architecture: iphoneos-arm
-Description: real-time fps indicator for games
-Maintainer: Brend0n <brendonjkding@126.com>
-Author: Brend0n <brendonjkding@126.com>
+Package: com.brend0n.fpsindicator
+Name: FPSIndicator
+Version: 0.0.4.2-1
+Architecture: iphoneos-arm64
+Description: Real-time in-game FPS indicator (injection-friendly fork). Shows an FPS label overlay; works with LiveContainer / sideload dylib injection as well as rootless jailbreaks. Fork changes: fixed Metal frame counting (CAMetalLayer.nextDrawable instead of the CAMetalDrawable protocol), enabled by default without a preference file, optional per-app config at Documents/FPSIndicator.plist.
+Maintainer: zxhzxhz
+Author: brend0n
 Section: Tweaks
-Depiction: http://brendonjkding.github.io/depictions/web/?p=com.brend0n.unityfpsindicator
-SileoDepiction: http://brendonjkding.github.io/depictions/web/com.brend0n.unityfpsindicator/depiction.json
+Depends: firmware (>= 14.0)
