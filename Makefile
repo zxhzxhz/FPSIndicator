@@ -10,6 +10,10 @@ TWEAK_NAME = FPSIndicator
 FPSIndicator_FILES = Tweak.x
 FPSIndicator_CFLAGS = -fobjc-arc -Wno-error=unused-variable -Wno-error=unused-function -include Prefix.pch
 FPSIndicator_CFLAGS += -I$(THEOS_PROJECT_DIR)/libcolorpicker
+# EAGLContext/OpenGLES are deprecated since iOS 12 and Theos promotes warnings to
+# errors by default; silence the OpenGLES deprecations at the header level and
+# keep a safety margin for harmless warnings from the bundled libcolorpicker.
+FPSIndicator_CFLAGS += -DGLES_SILENCE_DEPRECATION -Wno-error=deprecated-declarations -Wno-error=sign-compare
 FPSIndicator_FRAMEWORKS = Foundation UIKit QuartzCore
 
 FPSIndicator_FILES += libcolorpicker/libcolorpicker.mm
